@@ -25,6 +25,7 @@ export interface InventoryItem {
   description?: string;
   quantity: number;
   acBonus?: number;
+  speedBonus?: number;
   equipped?: boolean;
 }
 
@@ -43,7 +44,6 @@ export interface Character {
   attributes: Record<string, number>;
   hp: HpState;
   mp?: MpState;
-  speed: number;
   skills: CharacterSkill[];
   abilityUses: Record<string, AbilityUseState>;
   spellIds: string[];
@@ -70,4 +70,14 @@ export function wrapCharacter(character: Character): StoredCharacter {
     systemId: character.systemId,
     data: character,
   };
+}
+
+const IGNORED_CHARACTER_FIELDS = ["ac", "speed"] as const;
+
+export function stripIgnoredCharacterFields(data: Character): Character {
+  const clone = { ...data } as Character & Record<string, unknown>;
+  for (const field of IGNORED_CHARACTER_FIELDS) {
+    delete clone[field];
+  }
+  return clone;
 }

@@ -47,6 +47,7 @@ export interface RaceDefinition {
   skillBonuses: Record<string, number>;
   traits: AbilityBase[];
   grantsSpells?: string[];
+  speed?: number;
 }
 
 export interface MagicPointsProgression {

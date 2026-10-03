@@ -109,6 +109,10 @@ export function validateSystemDefinition(raw: unknown): Validated<SystemDefiniti
         continue;
       }
       raceIds.add(r.id);
+      e.check(
+        r.speed === undefined || isNumber(r.speed),
+        `Sistema: 'speed' da raça '${r.id}' deve ser um número.`
+      );
       if (Array.isArray(r.traits)) {
         for (const t of r.traits) {
           if (isRecord(t) && isString(t.id)) {
@@ -261,7 +265,6 @@ function validateCharacterData(raw: unknown): Validated<Character> {
   }
 
   e.check(raw.ac === undefined || isNumber(raw.ac), "Ficha: campo 'ac' deve ser um número.");
-  e.check(isNumber(raw.speed) && raw.speed >= 0, "Ficha: campo 'speed' deve ser um número ≥ 0.");
 
   if (Array.isArray(raw.skills)) {
     for (const s of raw.skills) {
@@ -303,6 +306,9 @@ function validateCharacterData(raw: unknown): Validated<Character> {
       }
       if (isRecord(it) && it.acBonus !== undefined) {
         e.check(isNumber(it.acBonus), "Ficha: bônus de CA do item deve ser um número.");
+      }
+      if (isRecord(it) && it.speedBonus !== undefined) {
+        e.check(isNumber(it.speedBonus), "Ficha: bônus de deslocamento do item deve ser um número.");
       }
       if (isRecord(it) && it.equipped !== undefined) {
         e.check(isBoolean(it.equipped), "Ficha: campo 'equipped' do item deve ser booleano.");

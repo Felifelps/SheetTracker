@@ -49,6 +49,7 @@
       "id": "tiefling",
       "name": "Tiefling",
       "description": "+1 em Inteligência e Carisma; +2 em Enganação e Furtividade.",
+      "speed": 6,
       "attributeBonuses": { "int": 1, "car": 1 },
       "skillBonuses": { "enganacao": 2, "furtividade": 2 },
       "traits": [
@@ -63,6 +64,7 @@
       "id": "drow",
       "name": "Drow",
       "description": "+1 em Destreza e Carisma; +2 em Furtividade e Intimidação.",
+      "speed": 6,
       "attributeBonuses": { "des": 1, "car": 1 },
       "skillBonuses": { "furtividade": 2, "intimidacao": 2 },
       "traits": [
@@ -88,6 +90,7 @@
       "id": "aasimar",
       "name": "Aasimar",
       "description": "+1 em Carisma e Sabedoria.",
+      "speed": 6,
       "attributeBonuses": { "car": 1, "sab": 1 },
       "skillBonuses": {},
       "grantsSpells": ["luz"],
@@ -109,6 +112,7 @@
       "id": "draconato",
       "name": "Draconato",
       "description": "+1 em Força e Carisma. Ancestral a escolher (ex.: Bronze — elétrico).",
+      "speed": 6,
       "attributeBonuses": { "for": 1, "car": 1 },
       "skillBonuses": {},
       "traits": [
@@ -335,5 +339,5 @@
       "description": "Gera uma fonte de luz simples. (Concedido pela raça Aasimar.)"
     }
   ],
-  "notes": "Fonte: arquivos do Obsidian (Sistema.md e fichas dos jogadores). Regras de progressão (definitivas): (1) PV máximo = hpBase + (nível - 1) × teto(hpBase / 2) + modificador de Constituição × nível — a Constituição é aplicada uma vez por nível; o máximo é recalculado quando nível ou Constituição mudam, preservando o PV atual sem ultrapassá-lo. (2) PM máximo = base + (nível - unlockLevel) × teto(base / 2), existindo apenas a partir do nível de desbloqueio da classe; no nível de desbloqueio o personagem recebe o valor base completo. (3) CA = 10 + modificador de Destreza + soma dos bônus de CA dos equipamentos equipados. (4) Teste de resistência = modificador do atributo + bônus de proficiência, quando a classe for proficiente. (5) PV e PM máximos são exclusivamente calculados pelo sistema: não são editáveis na interface e valores trazidos por JSON importado são ignorados e recalculados. (6) O seletor de nível oferece apenas os níveis com conteúdo efetivamente definido no JSON da classe. Outras decisões: (a) apenas as magias concedidas pela Maldição do Guardião (nível 2) custam Pontos de Magia; PM são recuperados após um descanso longo. (b) Habilidades com recarga 'encounter' (1x por encontro) também são restauradas por descanso curto e longo. (c) Descanso longo restaura PV e PM completamente; descanso curto recupera metade do máximo. (d) Deslocamento é medido em quadrados. (e) A lista de perícias segue os nomes padrão D&D em português; as condições são uma lista de apoio, não regras formais dos arquivos. Em caso de conflito com documentos antigos, valem a fórmula e as definições atuais."
+  "notes": "Fonte: arquivos do Obsidian (Sistema.md e fichas dos jogadores). Regras de progressão (definitivas): (1) PV máximo = hpBase + (nível - 1) × teto(hpBase / 2) + modificador de Constituição × nível — a Constituição é aplicada uma vez por nível; o máximo é recalculado quando nível ou Constituição mudam, preservando o PV atual sem ultrapassá-lo. (2) PM máximo = base + (nível - unlockLevel) × teto(base / 2), existindo apenas a partir do nível de desbloqueio da classe; no nível de desbloqueio o personagem recebe o valor base completo. (3) CA = 10 + modificador de Destreza + soma dos bônus de CA dos equipamentos equipados. (4) Deslocamento = valor definido pela raça + soma dos bônus de deslocamento dos equipamentos equipados; não é editável diretamente. (5) Teste de resistência = modificador do atributo + bônus de proficiência, quando a classe for proficiente. (6) PV e PM máximos são exclusivamente calculados pelo sistema: não são editáveis na interface e valores trazidos por JSON importado são ignorados e recalculados; o mesmo vale para o deslocamento. (7) O seletor de nível oferece apenas os níveis com conteúdo efetivamente definido no JSON da classe. Outras decisões: (a) apenas as magias concedidas pela Maldição do Guardião (nível 2) custam Pontos de Magia; PM são recuperados após um descanso longo. (b) Habilidades com recarga 'encounter' (1x por encontro) também são restauradas por descanso curto e longo. (c) Descanso longo restaura PV e PM completamente; descanso curto recupera metade do máximo. (d) Deslocamento é medido em quadrados. (e) A lista de perícias segue os nomes padrão D&D em português; as condições são uma lista de apoio, não regras formais dos arquivos. Em caso de conflito com documentos antigos, valem a fórmula e as definições atuais."
 }
