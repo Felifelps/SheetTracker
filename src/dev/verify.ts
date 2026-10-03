@@ -5,15 +5,17 @@ import {
   validateCharacterAgainstSystem,
 } from "../domain/validation";
 import {
+  computeMaxHp,
+  computeMaxMp,
+  computeAc,
+  getSavingThrowBonus,
+  getProficiency,
   getSpellSaveDc,
   getSpellAttackBonus,
-  getProficiency,
-  getSuggestedHp,
-  getSuggestedMp,
-  clampHp,
-  clampMp,
 } from "../rules/derived";
-import { applyRest, initializeAbilityUses } from "../rules/rest";
+import { applyRest, normalizeCharacterState } from "../rules/rest";
+import { getMaxDefinedLevel, getDefinedLevels } from "../rules/catalog";
+import { clampLevel } from "../rules/derived";
 import { importCharacterFromParsed } from "../services/importExport";
 import { wrapCharacter, type StoredCharacter, type Character } from "../domain/character";
 import { CUSTOM_CONDITION_PREFIX } from "../domain/character";
@@ -28,17 +30,34 @@ const systemCheck = validateSystemDefinition(pseudoDndJson);
 check("sistema embutido é válido", systemCheck.ok, systemCheck.ok ? "" : systemCheck.errors.join("; "));
 const system = (pseudoDndJson as unknown) as SystemDefinition;
 
-const gael: Character = {
+function makeCharacter(overrides: Partial<Character> = {}): Character {
+  return {
+    id: "test",
+    name: "Teste",
+    systemId: "pseudo-dnd",
+    raceId: "tiefling",
+    classId: "necromante",
+    level: 1,
+    attributes: { for: 1, des: -1, con: 0, int: 4, sab: 1, car: 3 },
+    hp: { current: 0, max: 0 },
+    speed: 6,
+    skills: [],
+    abilityUses: {},
+    spellIds: [],
+    inventory: [],
+    conditions: [],
+    notes: "",
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+const gael: Character = makeCharacter({
   id: "gael-test",
   name: "Gael Arisen",
-  systemId: "pseudo-dnd",
-  raceId: "tiefling",
-  classId: "necromante",
   level: 2,
-  attributes: { for: 1, des: -1, con: 0, int: 4, sab: 1, car: 3 },
-  hp: { current: 10, max: 10 },
+  hp: { current: 9, max: 9 },
   mp: { current: 3, max: 3 },
-  speed: 6,
   skills: [
     { skillId: "enganacao", bonus: 2, expertise: false },
     { skillId: "furtividade", bonus: 2, expertise: false },
@@ -48,10 +67,8 @@ const gael: Character = {
   abilityUses: { "toque-da-morte": { current: 2 } },
   spellIds: ["ilusao-menor", "toque-arrepiante", "infligir-ferimentos", "cegueira-surdez"],
   inventory: [{ id: "i1", name: "Adaga", damage: "1d4", quantity: 1 }],
-  conditions: [],
   notes: "Braço direito tatuado",
-  updatedAt: new Date().toISOString(),
-};
+});
 const storedGael = wrapCharacter(gael);
 
 check("ficha de Gael valida", validateStoredCharacter(storedGael).ok, "");
@@ -61,82 +78,195 @@ check(
   validateCharacterAgainstSystem(storedGael, system).join("; ")
 );
 
+check("proficiência nível 2 = +2", getProficiency(system, gael) === 2, String(getProficiency(system, gael)));
 check("CD de magia necromante = 14", getSpellSaveDc(system, gael) === 14, String(getSpellSaveDc(system, gael)));
 check("ataque mágico necromante = +6", getSpellAttackBonus(system, gael) === 6, String(getSpellAttackBonus(system, gael)));
-check("proficiência nível 2 = +2", getProficiency(system, gael) === 2, String(getProficiency(system, gael)));
-check("PV sugerido necromante nv2 = 10", getSuggestedHp(system, gael) === 10, String(getSuggestedHp(system, gael)));
-check("PM sugerido necromante nv2 = 3", getSuggestedMp(system, gael) === 3, String(getSuggestedMp(system, gael)));
 
-const kaelest: Character = {
-  ...gael,
-  id: "kaelest-test",
-  raceId: "drow",
-  classId: "druida",
-  attributes: { for: 1, des: 1, con: 2, int: 1, sab: 3, car: 0 },
-  mp: undefined,
-  spellIds: [],
-};
-check("CD de magia druida = 13", getSpellSaveDc(system, kaelest) === 13, String(getSpellSaveDc(system, kaelest)));
-check("ataque mágico druida = +5", getSpellAttackBonus(system, kaelest) === 5, String(getSpellAttackBonus(system, kaelest)));
+check(
+  "cenário 1: necromante nível 1 CON +2 = 8 PV (6 + 2×1)",
+  computeMaxHp(system, "necromante", 1, { con: 2 }) === 8,
+  String(computeMaxHp(system, "necromante", 1, { con: 2 }))
+);
+check(
+  "cenário 1: necromante nível 1 não possui PM",
+  computeMaxMp(system, "necromante", 1) === undefined,
+  String(computeMaxMp(system, "necromante", 1))
+);
+check(
+  "cenário 2: necromante nível 2 CON +2 = 13 PV (6 + 3 + 2×2)",
+  computeMaxHp(system, "necromante", 2, { con: 2 }) === 13,
+  String(computeMaxHp(system, "necromante", 2, { con: 2 }))
+);
+check(
+  "cenário 2: necromante nível 2 PM = 3 (base)",
+  computeMaxMp(system, "necromante", 2) === 3,
+  String(computeMaxMp(system, "necromante", 2))
+);
+check(
+  "cenário 2b: necromante nível 2 CON +1 = 11 PV (6 + 3 + 1×2)",
+  computeMaxHp(system, "necromante", 2, { con: 1 }) === 11,
+  String(computeMaxHp(system, "necromante", 2, { con: 1 }))
+);
+check(
+  "cenário 3: necromante nível 3 CON +2 = 18 PV (6 + 6 + 2×3)",
+  computeMaxHp(system, "necromante", 3, { con: 2 }) === 18,
+  String(computeMaxHp(system, "necromante", 3, { con: 2 }))
+);
+check(
+  "cenário 3: necromante nível 3 PM = 5 (3 + 2)",
+  computeMaxMp(system, "necromante", 3) === 5,
+  String(computeMaxMp(system, "necromante", 3))
+);
+check(
+  "cenário 3: necromante nível 4 PM = 7",
+  computeMaxMp(system, "necromante", 4) === 7,
+  String(computeMaxMp(system, "necromante", 4))
+);
+check(
+  "cenário 4: mudar CON recalcula PV máximo (CON +3 no nível 2 = 15)",
+  computeMaxHp(system, "necromante", 2, { con: 3 }) === 15,
+  String(computeMaxHp(system, "necromante", 2, { con: 3 }))
+);
+check(
+  "cenário 4: PV atual é preservado ao recalcular o máximo",
+  normalizeCharacterState(system, makeCharacter({ level: 2, hp: { current: 4, max: 9 } })).hp.current === 4,
+  JSON.stringify(normalizeCharacterState(system, makeCharacter({ level: 2, hp: { current: 4, max: 9 } })).hp)
+);
+check(
+  "cenário 4: PV atual acima do novo máximo é limitado (CON -3 no nível 2 → máx 3)",
+  normalizeCharacterState(system, makeCharacter({ level: 2, attributes: { con: -3 }, hp: { current: 9, max: 9 } })).hp.current === 3,
+  ""
+);
 
-const ladino: Character = { ...gael, classId: "ladino", mp: undefined, level: 2 };
-check("ladino sem PM", getSuggestedMp(system, ladino) === undefined, "");
-check("ladino sem CD de magia", getSpellSaveDc(system, ladino) === null, "");
-check("PV sugerido ladino nv2 = 13", getSuggestedHp(system, ladino) === 13, String(getSuggestedHp(system, ladino)));
+check(
+  "cenário 2: subir de nível 1 → 2 inicializa PM nos dados",
+  (() => {
+    const leveledUp = normalizeCharacterState(system, makeCharacter({ level: 2, mp: undefined }));
+    return leveledUp.mp?.current === 3 && leveledUp.mp.max === 3;
+  })(),
+  JSON.stringify(normalizeCharacterState(system, makeCharacter({ level: 2, mp: undefined })).mp)
+);
+check(
+  "descer para nível 1 remove PM dos dados",
+  normalizeCharacterState(system, makeCharacter({ level: 1, mp: { current: 3, max: 3 } })).mp === undefined,
+  ""
+);
+check(
+  "druida também recebe PM no nível de desbloqueio",
+  computeMaxMp(system, "druida", 2) === 3 && computeMaxMp(system, "druida", 1) === undefined,
+  ""
+);
+check(
+  "PV do druida: base 8, nível 2 CON +2 = 16 (8 + 4 + 2×2)",
+  computeMaxHp(system, "druida", 2, { con: 2 }) === 16,
+  String(computeMaxHp(system, "druida", 2, { con: 2 }))
+);
+check(
+  "PV do ladino: base 8, nível 1 = 8 + CON (8+2=10, ficha do Kerp)",
+  computeMaxHp(system, "ladino", 1, { con: 2 }) === 10,
+  String(computeMaxHp(system, "ladino", 1, { con: 2 }))
+);
+check("ladino sem PM em qualquer nível", computeMaxMp(system, "ladino", 3) === undefined, "");
+check("CD de magia druida = 13", getSpellSaveDc(system, makeCharacter({ classId: "druida", attributes: { sab: 3 } })) === 13, "");
+check("ataque mágico druida = +5", getSpellAttackBonus(system, makeCharacter({ classId: "druida", attributes: { sab: 3 } })) === 5, "");
 
-check("clampHp limita current em max", clampHp({ current: 15, max: 10 }).current === 10, "");
-check("clampHp impede negativo", clampHp({ current: -3, max: 10 }).current === 0, "");
-check("clampMp limita", clampMp({ current: 9, max: 3 }).current === 3, "");
+check(
+  "cenário 5: CA sem equipamento = 10 + DES (10+2=12)",
+  computeAc(makeCharacter({
+    attributes: { des: 2 },
+    inventory: [{ id: "s1", name: "Escudo", acBonus: 2, equipped: false, quantity: 1 }],
+  })) === 12,
+  ""
+);
+check(
+  "cenário 5: equipar escudo +2 aplica o bônus (10+2+2=14)",
+  computeAc(makeCharacter({
+    attributes: { des: 2 },
+    inventory: [{ id: "s1", name: "Escudo", acBonus: 2, equipped: true, quantity: 1 }],
+  })) === 14,
+  ""
+);
+check(
+  "cenário 6: desequipar remove o bônus",
+  computeAc(makeCharacter({
+    attributes: { des: 2 },
+    inventory: [
+      { id: "s1", name: "Escudo", acBonus: 2, equipped: true, quantity: 1 },
+      { id: "s2", name: "Escudo 2", acBonus: 1, equipped: false, quantity: 1 },
+    ],
+  })) === 14,
+  ""
+);
+check(
+  "CA do Kerp: couro equipado +1 e DES +3 = 14",
+  computeAc(makeCharacter({
+    classId: "ladino",
+    attributes: { des: 3 },
+    inventory: [{ id: "a1", name: "Armadura de Couro", acBonus: 1, equipped: true, quantity: 1 }],
+  })) === 14,
+  ""
+);
 
-const uses = initializeAbilityUses(system, gael);
-check("toque da morte inicia 2/2", uses["toque-da-morte"]?.current === 2, JSON.stringify(uses));
+check(
+  "cenário 7: teste de resistência com proficiência (CON +0 + prof +2 = +2)",
+  getSavingThrowBonus(system, gael, "con") === 2,
+  String(getSavingThrowBonus(system, gael, "con"))
+);
+check(
+  "cenário 7: necromante proficiente em CON e CAR",
+  getSavingThrowBonus(system, gael, "car") === 3 + 2,
+  String(getSavingThrowBonus(system, gael, "car"))
+);
+check(
+  "cenário 8: teste de resistência sem proficiência (FOR +1, sem prof = +1)",
+  getSavingThrowBonus(system, gael, "for") === 1,
+  String(getSavingThrowBonus(system, gael, "for"))
+);
+check(
+  "cenário 8: ladino proficiente em DES e INT",
+  (() => {
+    const kerp = makeCharacter({ classId: "ladino", attributes: { des: 3, int: 1, con: 2 } });
+    return (
+      getSavingThrowBonus(system, kerp, "des") === 3 + 2 &&
+      getSavingThrowBonus(system, kerp, "int") === 1 + 2 &&
+      getSavingThrowBonus(system, kerp, "con") === 2
+    );
+  })(),
+  ""
+);
 
-const spent: Character = {
-  ...gael,
-  hp: { current: 2, max: 10 },
+const shortRest = applyRest(system, makeCharacter({
+  level: 2,
+  hp: { current: 2, max: 9 },
+  mp: { current: 0, max: 3 },
   abilityUses: {
     "toque-da-morte": { current: 0 },
     "forma-selvagem": { current: 0 },
     "magia-ancestral": { current: 0 },
   },
-  mp: { current: 0, max: 3 },
-};
-const shortRest = applyRest(system, spent, "short");
+}), "short");
 check(
-  "descanso curto recupera 1 uso da Forma Selvagem",
-  shortRest.abilityUses["forma-selvagem"]?.current === 1,
-  JSON.stringify(shortRest.abilityUses)
-);
-check(
-  "descanso curto restaura habilidade por encontro",
-  shortRest.abilityUses["magia-ancestral"]?.current === 1,
-  JSON.stringify(shortRest.abilityUses)
-);
-check(
-  "descanso curto NÃO restaura descanso longo simples",
-  shortRest.abilityUses["toque-da-morte"]?.current === 0,
-  JSON.stringify(shortRest.abilityUses)
-);
-check(
-  "descanso curto recupera metade do máximo de PM",
-  shortRest.mp?.current === 1,
-  String(shortRest.mp?.current)
-);
-check(
-  "descanso curto recupera metade do máximo de PV",
-  shortRest.hp.current === 7,
+  "descanso curto recupera metade do PV máximo (2+4=6)",
+  shortRest.hp.current === 6,
   String(shortRest.hp.current)
 );
 check(
-  "descanso curto não ultrapassa o máximo de PV",
-  shortRest.hp.current <= shortRest.hp.max,
-  ""
+  "descanso curto recupera metade do PM máximo (0+1=1)",
+  shortRest.mp?.current === 1,
+  String(shortRest.mp?.current)
 );
+check("descanso curto recupera 1 uso da Forma Selvagem", shortRest.abilityUses["forma-selvagem"]?.current === 1, "");
+check("descanso curto NÃO restaura descanso longo simples", shortRest.abilityUses["toque-da-morte"]?.current === 0, "");
 
-const longRest = applyRest(system, spent, "long");
-check("descanso longo restaura usos", longRest.abilityUses["toque-da-morte"]?.current === 2, JSON.stringify(longRest.abilityUses));
-check("descanso longo recupera PM completamente", longRest.mp?.current === 3, String(longRest.mp?.current));
-check("descanso longo recupera PV completamente", longRest.hp.current === longRest.hp.max, String(longRest.hp.current));
+const longRest = applyRest(system, makeCharacter({
+  level: 2,
+  hp: { current: 2, max: 9 },
+  mp: { current: 0, max: 3 },
+  abilityUses: { "toque-da-morte": { current: 0 } },
+}), "long");
+check("descanso longo recupera PV completamente", longRest.hp.current === longRest.hp.max, "");
+check("descanso longo recupera PM completamente", longRest.mp?.current === 3, "");
+check("descanso longo restaura usos", longRest.abilityUses["toque-da-morte"]?.current === 2, "");
 
 const wrongSystem = importCharacterFromParsed(storedGael, { ...system, id: "outro-sistema" });
 check("import com sistema errado falha", !wrongSystem.ok, "");
@@ -163,26 +293,72 @@ const negativeHp = validateStoredCharacter({
 });
 check("PV negativo é rejeitado", !negativeHp.ok, "");
 
-const complete: Character = {
-  ...gael,
-  id: "completo-test",
-  ac: 14,
-  notes: "Perna esquerda tatuada; tem um anel do artífice.",
-  skills: [
-    ...gael.skills,
-    { skillId: "prestidigitacao", bonus: 4, expertise: true },
-    { skillId: "percepcao", bonus: 2, expertise: false },
-  ],
-  inventory: [
-    { id: "i1", name: "Adaga", damage: "1d4", quantity: 2 },
-    { id: "i2", name: "Armadura de Couro", description: "CA 12 + DES", quantity: 1 },
-  ],
-  conditions: [
-    { id: "cego", name: "Cego" },
-    { id: `${CUSTOM_CONDITION_PREFIX}em-chamas-a1b2c3`, name: "Em Chamas" },
-  ],
-};
-const storedComplete = wrapCharacter(complete);
+check(
+  "cenário 10: importação normaliza ficha antiga (necromante nível 2 sem PM recebe PM 3/3 e PV máximo recalculado)",
+  (() => {
+    const legacy = wrapCharacter(makeCharacter({ id: "legacy", level: 2, hp: { current: 6, max: 6 } }));
+    const result = importCharacterFromParsed(JSON.parse(JSON.stringify(legacy)), system);
+    if (!result.ok) return false;
+    return (
+      result.character.data.mp?.current === 3 &&
+      result.character.data.mp.max === 3 &&
+      result.character.data.hp.max === 9 &&
+      result.character.data.hp.current === 6
+    );
+  })(),
+  ""
+);
+
+check(
+  "cenário 10: importação ignora PV/PM máximos arbitrários e o campo ac antigo",
+  (() => {
+    const hacked = wrapCharacter(
+      makeCharacter({
+        id: "hacked",
+        level: 2,
+        hp: { current: 2, max: 999 },
+        mp: { current: 1, max: 999 },
+      })
+    ) as StoredCharacter & { data: Character & { ac?: number } };
+    hacked.data.ac = 25;
+    const result = importCharacterFromParsed(JSON.parse(JSON.stringify(hacked)), system);
+    if (!result.ok) return false;
+    const data = result.character.data as Character & { ac?: number };
+    return (
+      data.hp.max === 9 &&
+      data.hp.current === 2 &&
+      data.mp?.max === 3 &&
+      data.mp.current === 1 &&
+      data.ac === undefined
+    );
+  })(),
+  ""
+);
+
+check(
+  "cenário 10: PV atual acima do máximo recalculado é limitado na importação",
+  (() => {
+    const overflow = wrapCharacter(makeCharacter({ id: "overflow", level: 1, hp: { current: 50, max: 50 } }));
+    const result = importCharacterFromParsed(JSON.parse(JSON.stringify(overflow)), system);
+    return result.ok && result.character.data.hp.current === 6 && result.character.data.hp.max === 6;
+  })(),
+  ""
+);
+
+check(
+  "seletor de nível: apenas níveis definidos no JSON (necromante → [1, 2], máximo 2)",
+  (() => {
+    const levels = getDefinedLevels(system, "necromante");
+    return (
+      levels.length === 2 &&
+      levels[0] === 1 &&
+      levels[1] === 2 &&
+      getMaxDefinedLevel(system, "necromante") === 2
+    );
+  })(),
+  ""
+);
+check("clampLevel respeita o máximo definido pela classe", clampLevel(5, 2) === 2 && clampLevel(0, 2) === 1, "");
 
 function testExportRoundTrip(name: string, original: StoredCharacter) {
   const exportedJson: unknown = JSON.parse(JSON.stringify(original));
@@ -195,7 +371,7 @@ function testExportRoundTrip(name: string, original: StoredCharacter) {
   );
   const reimported = importCharacterFromParsed(exportedJson, system);
   check(
-    `export ${name}: reimportação aceita e equivalente`,
+    `export ${name}: reimportação aceita e consistente`,
     reimported.ok && JSON.stringify(reimported.character.data) === JSON.stringify(original.data),
     reimported.ok ? "" : reimported.errors.join("; ")
   );
@@ -211,13 +387,60 @@ function testExportRoundTrip(name: string, original: StoredCharacter) {
   );
 }
 
+const complete = normalizeCharacterState(system, makeCharacter({
+  id: "completo-test",
+  level: 2,
+  hp: { current: 5, max: 0 },
+  mp: { current: 1, max: 0 },
+  skills: [
+    { skillId: "prestidigitacao", bonus: 4, expertise: true },
+    { skillId: "percepcao", bonus: 2, expertise: false },
+  ],
+  inventory: [
+    { id: "i1", name: "Adaga", damage: "1d4", quantity: 2 },
+    { id: "i2", name: "Armadura de Couro", description: "CA +1", acBonus: 1, equipped: true, quantity: 1 },
+  ],
+  conditions: [
+    { id: "cego", name: "Cego" },
+    { id: `${CUSTOM_CONDITION_PREFIX}em-chamas-a1b2c3`, name: "Em Chamas" },
+  ],
+  notes: "Perna esquerda tatuada.",
+}));
+const storedComplete = wrapCharacter(complete);
+
 testExportRoundTrip("Gael", storedGael);
-testExportRoundTrip("ficha completa", storedComplete);
+testExportRoundTrip("ficha completa normalizada", storedComplete);
 
 const corruptedExport = validateStoredCharacter(
   JSON.parse(JSON.stringify({ ...storedComplete, data: { ...storedComplete.data, attributes: { for: "alto" } } }))
 );
 check("export corrompido (atributo não numérico) é rejeitado", !corruptedExport.ok, "");
+
+check(
+  "cenário 9: ficha normalizada sobrevive a serialização (persistência)",
+  (() => {
+    const serialized = JSON.stringify(storedComplete);
+    const parsed = JSON.parse(serialized) as unknown;
+    const validated = validateStoredCharacter(parsed);
+    if (!validated.ok) return false;
+    const renormalized = normalizeCharacterState(system, validated.value.data);
+    return (
+      renormalized.hp.max === storedComplete.data.hp.max &&
+      renormalized.mp?.max === storedComplete.data.mp?.max
+    );
+  })(),
+  ""
+);
+
+check(
+  "cenário 9: recarregar e renormalizar não altera PV atual",
+  (() => {
+    const parsed = JSON.parse(JSON.stringify(storedComplete)) as { data: Character };
+    const renormalized = normalizeCharacterState(system, parsed.data);
+    return renormalized.hp.current === storedComplete.data.hp.current;
+  })(),
+  ""
+);
 
 if (failures.length > 0) {
   throw new Error(`FALHOU (${failures.length}):\n- ${failures.join("\n- ")}`);
