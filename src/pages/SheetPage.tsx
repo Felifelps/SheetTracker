@@ -6,6 +6,7 @@ import type { Character } from "../domain/character";
 import { findClass, findRace, getDefinedLevels, getMaxDefinedLevel } from "../rules/catalog";
 import {
   computeAc,
+  computeSpeed,
   getProficiency,
   getSavingThrowBonus,
   getSpellAttackBonus,
@@ -140,6 +141,7 @@ export function SheetPage() {
   const spellDc = getSpellSaveDc(system, character);
   const spellAttack = getSpellAttackBonus(system, character);
   const armorClass = computeAc(character);
+  const speed = computeSpeed(system, character);
 
   const levelOptions = cls ? getDefinedLevels(system, character.classId) : [character.level];
 
@@ -201,23 +203,13 @@ export function SheetPage() {
             <span className="sheet-ac-value" title="10 + Destreza + bônus de CA dos equipamentos equipados">
               {armorClass}
             </span>
-            <label htmlFor="sheet-speed" className="sheet-ac-label">
-              Deslocamento
-            </label>
-            <input
-              id="sheet-speed"
-              className="sheet-ac-input"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={character.speed}
-              onChange={(event) => {
-                const value = event.target.valueAsNumber;
-                if (!Number.isNaN(value) && value >= 0) {
-                  update((c) => ({ ...c, speed: value }));
-                }
-              }}
-            />
+            <span className="sheet-ac-label">Deslocamento</span>
+            <span
+              className="sheet-ac-value"
+              title="Deslocamento da raça + bônus de deslocamento dos equipamentos equipados"
+            >
+              {speed}
+            </span>
             <span className="sheet-unit">{system.movementUnit}</span>
           </div>
         </div>
@@ -292,65 +284,69 @@ export function SheetPage() {
           </div>
         </section>
 
-        <section className="panel">
-          <h2>Atributos</h2>
-          <AttributeGrid
-            system={system}
-            attributes={character.attributes}
-            onChange={(attributeId, value) =>
-              update((c) => ({
-                ...c,
-                attributes: { ...c.attributes, [attributeId]: value },
-              }))
-            }
-          />
-        </section>
+        <div className="sheet-col">
+          <section className="panel">
+            <h2>Atributos</h2>
+            <AttributeGrid
+              system={system}
+              attributes={character.attributes}
+              onChange={(attributeId, value) =>
+                update((c) => ({
+                  ...c,
+                  attributes: { ...c.attributes, [attributeId]: value },
+                }))
+              }
+            />
+          </section>
 
-        <section className="panel">
-          <h2>Combate e magia</h2>
-          <ul className="stat-list">
-            <li className="stat-row">
-              <span>Proficiência</span>
-              <strong>+{proficiency}</strong>
-            </li>
-            {spellDc !== null && (
+          <section className="panel">
+            <h2>Combate</h2>
+            <ul className="stat-list">
               <li className="stat-row">
-                <span>CD de resistência de magia</span>
-                <strong>{spellDc}</strong>
+                <span>Proficiência</span>
+                <strong>+{proficiency}</strong>
               </li>
-            )}
-            {spellAttack !== null && (
-              <li className="stat-row">
-                <span>Bônus de ataque de magia</span>
-                <strong>+{spellAttack}</strong>
-              </li>
-            )}
-          </ul>
-          <h3>Testes de resistência</h3>
-          <p className="hint">Atributo + proficiência (destaque = proficiente na classe).</p>
-          <ul className="preview-tags">
-            {system.attributes.map((attr) => {
-              const bonus = getSavingThrowBonus(system, character, attr.id);
-              const proficient = (cls?.savingThrows ?? []).includes(attr.id);
-              return (
-                <li
-                  key={attr.id}
-                  className={`tag ${proficient ? "tag-prof" : ""}`}
-                  title={proficient ? "Proficiente nesta resistência" : "Sem proficiência"}
-                >
-                  {attr.abbr} {bonus >= 0 ? `+${bonus}` : bonus}
+              {spellDc !== null && (
+                <li className="stat-row">
+                  <span>CD de resistência de magia</span>
+                  <strong>{spellDc}</strong>
                 </li>
-              );
-            })}
-          </ul>
-        </section>
+              )}
+              {spellAttack !== null && (
+                <li className="stat-row">
+                  <span>Bônus de ataque de magia</span>
+                  <strong>+{spellAttack}</strong>
+                </li>
+              )}
+            </ul>
+            <h3>Testes de resistência</h3>
+            <p className="hint">Atributo + proficiência (destaque = proficiente na classe).</p>
+            <ul className="preview-tags">
+              {system.attributes.map((attr) => {
+                const bonus = getSavingThrowBonus(system, character, attr.id);
+                const proficient = (cls?.savingThrows ?? []).includes(attr.id);
+                return (
+                  <li
+                    key={attr.id}
+                    className={`tag ${proficient ? "tag-prof" : ""}`}
+                    title={proficient ? "Proficiente nesta resistência" : "Sem proficiência"}
+                  >
+                    {attr.abbr} {bonus >= 0 ? `+${bonus}` : bonus}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
 
-        <AbilitiesSection system={system} character={character} update={update} />
-        <SpellsSection system={system} character={character} />
-        <SkillsSection system={system} character={character} update={update} />
-        <InventorySection character={character} update={update} />
-        <ConditionsSection system={system} character={character} update={update} />
-        <div className="sheet-grid-full">
+          <SpellsSection system={system} character={character} />
+
+          <AbilitiesSection system={system} character={character} update={update} />
+          <SkillsSection system={system} character={character} update={update} />
+        </div>
+
+        <div className="sheet-col">
+          <ConditionsSection system={system} character={character} update={update} />
+          <InventorySection character={character} update={update} />
           <NotesSection character={character} update={update} />
         </div>
       </div>

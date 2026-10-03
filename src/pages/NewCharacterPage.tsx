@@ -149,7 +149,6 @@ export function NewCharacterPage() {
       level,
       attributes,
       hp: { current: 0, max: 0 },
-      speed: system.defaultSpeed ?? 6,
       skills: [...trainedSkills, ...(race ? Object.keys(race.skillBonuses) : [])]
         .filter((id, i, arr) => arr.indexOf(id) === i)
         .sort((a, b) =>
@@ -397,6 +396,10 @@ export function NewCharacterPage() {
               <li>
                 <span>Proficiência</span>
                 <strong>+{proficiency}</strong>
+              </li>
+              <li>
+                <span>Deslocamento</span>
+                <strong>{race?.speed ?? system.defaultSpeed ?? 0} {system.movementUnit}</strong>
               </li>
               <li>
                 <span>Testes de resistência (proficientes)</span>

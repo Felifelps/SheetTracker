@@ -3,17 +3,30 @@ import { Link } from "react-router-dom";
 import { useSystem } from "../state/useSystem";
 import { useCharactersApi } from "../state/CharactersProvider";
 import { CharacterCard } from "../components/CharacterCard";
-import { importCharacterFromParsed, readFileAsJson } from "../services/importExport";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import type { StoredCharacter } from "../domain/character";
+import {
+  importCharacterFromParsed,
+  readFileAsJson,
+  sameCharacterName,
+} from "../services/importExport";
 
 interface Feedback {
   kind: "ok" | "error";
   text: string;
 }
 
+interface PendingOverwrite {
+  imported: StoredCharacter;
+  existingId: string;
+  existingName: string;
+}
+
 export function HomePage() {
   const system = useSystem();
   const api = useCharactersApi();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [pendingOverwrite, setPendingOverwrite] = useState<PendingOverwrite | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sorted = [...api.characters].sort((a, b) =>
@@ -31,12 +44,29 @@ export function HomePage() {
         });
         return;
       }
-      const { replaced } = api.addCharacter(outcome.character);
+      const imported = outcome.character;
+      const sameId = api.characters.find((c) => c.data.id === imported.data.id);
+      if (sameId) {
+        api.addCharacter(imported);
+        setFeedback({
+          kind: "ok",
+          text: `Ficha '${imported.data.name}' atualizada (reimportada pelo mesmo ID).`,
+        });
+        return;
+      }
+      const byName = api.characters.find((c) => sameCharacterName(c.data.name, imported.data.name));
+      if (byName) {
+        setPendingOverwrite({
+          imported,
+          existingId: byName.data.id,
+          existingName: byName.data.name,
+        });
+        return;
+      }
+      api.addCharacter(imported);
       setFeedback({
         kind: "ok",
-        text: replaced
-          ? `Ficha '${outcome.character.data.name}' atualizada (já existia uma com o mesmo ID).`
-          : `Ficha '${outcome.character.data.name}' importada com sucesso.`,
+        text: `Ficha '${imported.data.name}' importada com sucesso.`,
       });
     } catch (error) {
       setFeedback({
@@ -46,6 +76,29 @@ export function HomePage() {
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  function confirmOverwrite() {
+    if (!pendingOverwrite) return;
+    const { imported, existingId, existingName } = pendingOverwrite;
+    api.addCharacter({
+      ...imported,
+      data: { ...imported.data, id: existingId },
+    });
+    setPendingOverwrite(null);
+    setFeedback({
+      kind: "ok",
+      text: `Ficha de '${existingName}' sobrescrita com os dados importados.`,
+    });
+  }
+
+  function cancelOverwrite() {
+    const name = pendingOverwrite?.imported.data.name;
+    setPendingOverwrite(null);
+    setFeedback({
+      kind: "ok",
+      text: `Importação cancelada. A ficha de '${name ?? ""}' foi mantida como estava.`,
+    });
   }
 
   return (
@@ -142,6 +195,17 @@ export function HomePage() {
             />
           ))}
         </div>
+      )}
+
+      {pendingOverwrite && (
+        <ConfirmDialog
+          title="Personagem já existe"
+          message={`Já existe uma ficha chamada '${pendingOverwrite.existingName}'. Sobrescrever os dados dela com o conteúdo do arquivo importado? A ficha atual será substituída.`}
+          confirmLabel="Sobrescrever"
+          destructive
+          onConfirm={confirmOverwrite}
+          onCancel={cancelOverwrite}
+        />
       )}
     </div>
   );
