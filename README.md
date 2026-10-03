@@ -4,9 +4,10 @@ Gerenciador de fichas de personagens de RPG de mesa. Frontend puro (SPA), sem ba
 
 ## Funcionalidades
 
-- Criar, editar, duplicar e excluir fichas (exclusão com confirmação)
+- Criar, editar e excluir fichas (exclusão com confirmação)
 - Visualização de ficha pensada para uso durante sessão: PV/PM com botões grandes de ajuste, contadores de uso de habilidades, botões de descanso curto/longo
-- Atributos, perícias (com especialização), testes de resistência, CD/ataque de magia derivados do sistema
+- Atributos, perícias (com especialização), testes de resistência (atributo + proficiência), CD/ataque de magia derivados do sistema
+- Progressão derivada: PV máximo = PV base + (nível − 1) × teto(PV base/2) + mod. de Constituição; PM a partir do nível de desbloqueio da classe; CA = 10 + Destreza + bônus de CA dos equipamentos equipados
 - Magias com custo em Pontos de Magia, inventário, condições (padrão + personalizadas), anotações
 - Auto-save: tudo é salvo automaticamente no `localStorage`
 - Exportar/importar ficha individual em JSON (validado, com mensagens de erro claras)
@@ -63,9 +64,12 @@ Observação: `localStorage` é por origem/navegador. Cada jogador mantém suas 
 
 Documentadas em `src/systems/pseudo-dnd.json` → campo `notes`:
 
-1. PV do nível 1 inferidos das fichas (`Sistema.md` documenta apenas o nível 2); PV máximo é sempre editável manualmente — a tabela é sugestão inicial.
-2. Apenas as magias da Maldição do Guardião (nível 2) custam PM; PM recuperados em descanso longo.
-3. Habilidades com recarga "por encontro" também são restauradas por descanso curto/longo.
-4. Deslocamento em quadrados; CA é campo opcional (aparece só quando relevante).
-5. Perícias seguem a lista padrão D&D em português; condições são lista de apoio (não formalizadas nos arquivos).
-6. Raça e classe são fixadas na criação; nível pode ser alterado depois (PV/PM sugeridos acompanham quando ainda não editados manualmente).
+1. Progressão de PV e PM centralizada em cada classe do JSON (`hpBase`, `spellcasting.magicPoints.{base, unlockLevel}`); PV máximo = base + (nível − 1) × teto(base/2) + **mod. de Constituição × nível**; PM a partir do nível de desbloqueio da classe; máximos são exclusivamente calculados (não editáveis) e recalculados ao mudar nível/Constituição, preservando os valores atuais.
+2. Importação aceita somente campos editáveis: máximos (PV/PM), CA antiga e demais valores calculados são ignorados e recalculados.
+3. Seletor de nível oferece apenas os níveis definidos no JSON da classe (atualmente 1–2).
+4. CA é derivada (10 + DES + bônus de CA dos itens equipados); testes de resistência = modificador do atributo + proficiência da classe.
+5. Apenas as magias concedidas pela Maldição do Guardião (nível 2) custam PM; PM recuperados em descanso longo. Descanso longo restaura PV/PM por completo; descanso curto recupera metade do máximo.
+6. Habilidades com recarga "por encontro" também são restauradas por descanso curto/longo.
+7. Deslocamento em quadrados.
+8. Perícias seguem a lista padrão D&D em português; condições são lista de apoio (não formalizadas nos arquivos).
+9. Raça e classe são fixadas na criação; nível pode ser alterado depois dentro dos níveis definidos no JSON, recalculando recursos automaticamente. Em conflito com documentos antigos, valem as definições atuais.
