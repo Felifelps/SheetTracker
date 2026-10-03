@@ -1,4 +1,5 @@
 import type { Character, StoredCharacter } from "../domain/character";
+import { stripIgnoredCharacterFields } from "../domain/character";
 import type { SystemDefinition } from "../domain/system";
 import { normalizeCharacterState } from "../rules/rest";
 import {
@@ -35,6 +36,10 @@ export function downloadJson(value: unknown, fileName: string): void {
   URL.revokeObjectURL(url);
 }
 
+export function sameCharacterName(a: string, b: string): boolean {
+  return a.trim().toLocaleLowerCase("pt-BR") === b.trim().toLocaleLowerCase("pt-BR");
+}
+
 export async function readFileAsJson(file: File): Promise<unknown> {
   const text = await file.text();
   try {
@@ -51,13 +56,12 @@ export type ImportOutcome =
   | { ok: false; errors: string[] };
 
 function sanitizeImportedData(data: Character): Character {
-  const sanitized: Character = {
-    ...data,
-    hp: { current: data.hp.current, max: 0 },
-    mp: data.mp ? { current: data.mp.current, max: 0 } : undefined,
+  const sanitized = stripIgnoredCharacterFields(data);
+  return {
+    ...sanitized,
+    hp: { current: sanitized.hp.current, max: 0 },
+    mp: sanitized.mp ? { current: sanitized.mp.current, max: 0 } : undefined,
   };
-  delete (sanitized as unknown as Record<string, unknown>).ac;
-  return sanitized;
 }
 
 export function importCharacterFromParsed(

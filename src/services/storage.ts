@@ -1,4 +1,5 @@
 import type { StoredCharacter } from "../domain/character";
+import { stripIgnoredCharacterFields } from "../domain/character";
 import { validateStoredCharacter } from "../domain/validation";
 
 const CHARACTERS_KEY = "sheettracker.characters";
@@ -63,7 +64,10 @@ export function loadCharacters(): LoadResult {
   for (const [index, item] of raw.entries()) {
     const checked = validateStoredCharacter(item);
     if (checked.ok) {
-      result.characters.push(checked.value);
+      result.characters.push({
+        ...checked.value,
+        data: stripIgnoredCharacterFields(checked.value.data),
+      });
     } else {
       result.warnings.push(
         `Ficha na posição ${index + 1} foi ignorada por estar inválida: ${checked.errors[0]}`
