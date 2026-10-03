@@ -33,7 +33,17 @@ export function InventorySection({ character, update }: InventorySectionProps) {
     setNewDescription("");
   }
 
-  function updateItem(id: string, patch: Partial<{ name: string; damage?: string; description?: string; quantity: number }>) {
+  function updateItem(
+    id: string,
+    patch: Partial<{
+      name: string;
+      damage?: string;
+      description?: string;
+      quantity: number;
+      acBonus?: number;
+      equipped?: boolean;
+    }>
+  ) {
     update((c) => ({
       ...c,
       inventory: c.inventory.map((item) =>
@@ -52,6 +62,10 @@ export function InventorySection({ character, update }: InventorySectionProps) {
   return (
     <section className="panel">
       <h2>Inventário</h2>
+      <p className="hint">
+        CA = 10 + Destreza + bônus de CA dos itens equipados. Use o campo "CA +" no item e marque
+        "Equip." para aplicá-lo.
+      </p>
       {character.inventory.length === 0 && (
         <p className="section-empty">Nenhum item. Use o formulário abaixo para adicionar.</p>
       )}
@@ -111,6 +125,31 @@ export function InventorySection({ character, update }: InventorySectionProps) {
                   })
                 }
               />
+              <input
+                className="inventory-ac"
+                type="number"
+                inputMode="numeric"
+                placeholder="CA +"
+                aria-label={`Bônus de CA de ${item.name}`}
+                value={item.acBonus ?? ""}
+                onChange={(event) => {
+                  const value = event.target.valueAsNumber;
+                  updateItem(item.id, {
+                    acBonus: Number.isNaN(value) ? undefined : value,
+                  });
+                }}
+              />
+              <label className="check-label check-label-small equip-label">
+                <input
+                  type="checkbox"
+                  checked={item.equipped ?? false}
+                  onChange={() =>
+                    updateItem(item.id, { equipped: !(item.equipped ?? false) })
+                  }
+                  aria-label={`Equipar ${item.name}`}
+                />
+                <span>Equip.</span>
+              </label>
             </div>
             <button
               type="button"

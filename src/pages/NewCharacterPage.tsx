@@ -3,8 +3,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useSystem } from "../state/useSystem";
 import { useCharactersApi } from "../state/CharactersProvider";
 import { wrapCharacter } from "../domain/character";
-import { findClass, findRace, getLevelAbilities, getLevelSpells } from "../rules/catalog";
-import { initializeAbilityUses } from "../rules/rest";
+import { findClass, findRace, getDefinedLevels, getLevelAbilities, getLevelSpells } from "../rules/catalog";
+import { computeMaxHp, computeMaxMp } from "../rules/derived";
+import { normalizeCharacterState } from "../rules/rest";
 import { generateId } from "../utils/id";
 
 export function NewCharacterPage() {
@@ -24,18 +25,16 @@ export function NewCharacterPage() {
   const race = raceId ? findRace(system, raceId) : undefined;
   const cls = classId ? findClass(system, classId) : undefined;
 
-  const levelOptions = useMemo(() => {
-    if (!cls) return [];
-    return Object.keys(cls.levels)
-      .map(Number)
-      .sort((a, b) => a - b);
-  }, [cls]);
+  const levelOptions = useMemo(
+    () => (cls ? getDefinedLevels(system, cls.id) : [1]),
+    [cls, system]
+  );
 
   const levelDef = cls?.levels[String(level)];
 
   const proficiency = levelDef?.proficiency ?? 2;
-  const suggestedHp = levelDef?.hp;
-  const suggestedMp = cls?.spellcasting ? levelDef?.magicPoints : undefined;
+  const maxHpPreview = cls ? computeMaxHp(system, cls.id, level, attributeValues) : undefined;
+  const maxMpPreview = cls ? computeMaxMp(system, cls.id, level) : undefined;
 
   const hasExpertiseClass = useMemo(() => {
     if (!cls) return false;
@@ -73,13 +72,6 @@ export function NewCharacterPage() {
 
   function handleClassChange(nextClassId: string) {
     setClassId(nextClassId);
-    const nextClass = findClass(system, nextClassId);
-    const available = Object.keys(nextClass?.levels ?? {})
-      .map(Number)
-      .sort((a, b) => a - b);
-    if (!nextClass?.levels[String(level)] && available.length > 0) {
-      setLevel(available[0]);
-    }
     setExpertiseSkills(new Set());
   }
 
@@ -156,7 +148,7 @@ export function NewCharacterPage() {
       classId,
       level,
       attributes,
-      hp: { current: 1, max: 1 },
+      hp: { current: 0, max: 0 },
       speed: system.defaultSpeed ?? 6,
       skills: [...trainedSkills, ...(race ? Object.keys(race.skillBonuses) : [])]
         .filter((id, i, arr) => arr.indexOf(id) === i)
@@ -179,17 +171,11 @@ export function NewCharacterPage() {
       updatedAt: new Date().toISOString(),
     }).data;
 
-    const abilityUses = initializeAbilityUses(system, draft);
-    const hp = { current: suggestedHp ?? 1, max: suggestedHp ?? 1 };
-    const mp =
-      suggestedMp !== undefined ? { current: suggestedMp, max: suggestedMp } : undefined;
-
+    const normalized = normalizeCharacterState(system, draft);
     const stored = wrapCharacter({
-      ...draft,
+      ...normalized,
       id: generateId(),
-      hp,
-      mp,
-      abilityUses,
+      hp: { current: normalized.hp.max, max: normalized.hp.max },
     });
 
     addCharacter(stored);
@@ -399,13 +385,13 @@ export function NewCharacterPage() {
             <h2>Prévia da ficha</h2>
             <ul className="preview-list">
               <li>
-                <span>PV inicial sugerido</span>
-                <strong>{suggestedHp ?? "—"}</strong>
+                <span>PV máximo (base + níveis + Constituição)</span>
+                <strong>{maxHpPreview ?? "—"}</strong>
               </li>
-              {suggestedMp !== undefined && (
+              {maxMpPreview !== undefined && (
                 <li>
                   <span>Pontos de Magia</span>
-                  <strong>{suggestedMp}</strong>
+                  <strong>{maxMpPreview}</strong>
                 </li>
               )}
               <li>
@@ -413,11 +399,15 @@ export function NewCharacterPage() {
                 <strong>+{proficiency}</strong>
               </li>
               <li>
-                <span>Testes de resistência</span>
+                <span>Testes de resistência (proficientes)</span>
                 <strong>
                   {cls.savingThrows
-                    .map((id) => system.attributes.find((a) => a.id === id)?.abbr ?? id)
-                    .join(" e ")}
+                    .map((id) => {
+                      const abbr = system.attributes.find((a) => a.id === id)?.abbr ?? id;
+                      const bonus = (attributeValues[id] ?? 0) + proficiency;
+                      return `${abbr} ${bonus >= 0 ? "+" : ""}${bonus}`;
+                    })
+                    .join(", ")}
                 </strong>
               </li>
               {cls.spellcasting && (

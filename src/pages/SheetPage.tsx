@@ -3,18 +3,16 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useSystem } from "../state/useSystem";
 import { useCharactersApi } from "../state/CharactersProvider";
 import type { Character } from "../domain/character";
-import { findClass, findRace } from "../rules/catalog";
+import { findClass, findRace, getDefinedLevels, getMaxDefinedLevel } from "../rules/catalog";
 import {
+  computeAc,
   getProficiency,
+  getSavingThrowBonus,
   getSpellAttackBonus,
   getSpellSaveDc,
-  getSuggestedHp,
-  getSuggestedMp,
-  clampHp,
-  clampMp,
   clampLevel,
 } from "../rules/derived";
-import { applyRest, initializeAbilityUses, validateOrFixUses } from "../rules/rest";
+import { applyRest, normalizeCharacterState } from "../rules/rest";
 import { validateCharacterAgainstSystem } from "../domain/validation";
 import { ResourceBar } from "../components/ResourceBar";
 import { AttributeGrid } from "../components/AttributeGrid";
@@ -37,23 +35,19 @@ export function SheetPage() {
   const loaded = api.loaded;
   const character = stored?.data;
 
-  useEffect(() => {
-    if (!character) return;
-    const initialized = initializeAbilityUses(system, character);
-    const fixed = validateOrFixUses(system, character);
-    const merged: Record<string, { current: number }> = { ...initialized };
-    for (const [key, value] of Object.entries(fixed)) {
-      merged[key] = value;
-    }
-    if (JSON.stringify(merged) !== JSON.stringify(character.abilityUses)) {
-      api.updateCharacter(character.id, (c) => ({ ...c, abilityUses: merged }));
-    }
-  }, [character?.id]);
-
   const refErrors = useMemo(() => {
     if (!stored) return [];
     return validateCharacterAgainstSystem(stored, system);
   }, [stored, system]);
+
+  useEffect(() => {
+    if (!character || refErrors.length > 0) return;
+    const normalized = normalizeCharacterState(system, character);
+    if (JSON.stringify(normalized) !== JSON.stringify(character)) {
+      api.updateCharacter(character.id, () => normalized);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character?.id, refErrors.length]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -139,38 +133,21 @@ export function SheetPage() {
 
   const race = findRace(system, character.raceId);
   const cls = findClass(system, character.classId);
-  const update = (updater: (c: Character) => Character) => api.updateCharacter(character.id, updater);
+  const update = (updater: (c: Character) => Character) =>
+    api.updateCharacter(character.id, (c) => normalizeCharacterState(system, updater(c)));
 
   const proficiency = getProficiency(system, character);
   const spellDc = getSpellSaveDc(system, character);
   const spellAttack = getSpellAttackBonus(system, character);
+  const armorClass = computeAc(character);
 
-  const levelOptions = cls
-    ? Object.keys(cls.levels)
-        .map(Number)
-        .sort((a, b) => a - b)
-    : [character.level];
+  const levelOptions = cls ? getDefinedLevels(system, character.classId) : [character.level];
 
   const handleLevelChange = (nextLevel: number) => {
-    update((c) => {
-      const next: Character = { ...c, level: clampLevel(nextLevel) };
-      const oldHp = getSuggestedHp(system, c);
-      const newHp = getSuggestedHp(system, next);
-      if (oldHp !== undefined && newHp !== undefined && c.hp.max === oldHp) {
-        next.hp = clampHp({ current: c.hp.current, max: newHp });
-      }
-      const oldMp = getSuggestedMp(system, c);
-      const newMp = getSuggestedMp(system, next);
-      if (next.mp && oldMp !== undefined && newMp !== undefined && next.mp.max === oldMp) {
-        next.mp = clampMp({ current: next.mp.current, max: newMp });
-      }
-      return next;
-    });
-  };
-
-  const handleDuplicate = () => {
-    const newId = api.duplicateCharacter(character.id);
-    if (newId) navigate(`/ficha/${newId}`);
+    update((c) => ({
+      ...c,
+      level: clampLevel(nextLevel, getMaxDefinedLevel(system, c.classId)),
+    }));
   };
 
   const handleDelete = () => {
@@ -220,22 +197,10 @@ export function SheetPage() {
                 </option>
               ))}
             </select>
-            <label htmlFor="sheet-ac" className="sheet-ac-label">
-              CA
-            </label>
-            <input
-              id="sheet-ac"
-              className="sheet-ac-input"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={character.ac ?? ""}
-              placeholder="—"
-              onChange={(event) => {
-                const value = event.target.valueAsNumber;
-                update((c) => ({ ...c, ac: Number.isNaN(value) ? undefined : value }));
-              }}
-            />
+            <span className="sheet-ac-label">CA</span>
+            <span className="sheet-ac-value" title="10 + Destreza + bônus de CA dos equipamentos equipados">
+              {armorClass}
+            </span>
             <label htmlFor="sheet-speed" className="sheet-ac-label">
               Deslocamento
             </label>
@@ -259,9 +224,6 @@ export function SheetPage() {
         <div className="sheet-header-actions">
           <button type="button" className="btn" onClick={() => api.exportCharacter(character.id)}>
             Exportar
-          </button>
-          <button type="button" className="btn" onClick={handleDuplicate}>
-            Duplicar
           </button>
           <button
             type="button"
@@ -294,10 +256,7 @@ export function SheetPage() {
               current={character.hp.current}
               max={character.hp.max}
               onCurrentChange={(value) =>
-                update((c) => ({ ...c, hp: clampHp({ ...c.hp, current: value }) }))
-              }
-              onMaxChange={(value) =>
-                update((c) => ({ ...c, hp: clampHp({ ...c.hp, max: value }) }))
+                update((c) => ({ ...c, hp: { ...c.hp, current: value } }))
               }
             />
             {character.mp && (
@@ -307,10 +266,7 @@ export function SheetPage() {
                 current={character.mp.current}
                 max={character.mp.max}
                 onCurrentChange={(value) =>
-                  update((c) => ({ ...c, mp: clampMp({ ...c.mp!, current: value }) }))
-                }
-                onMaxChange={(value) =>
-                  update((c) => ({ ...c, mp: clampMp({ ...c.mp!, max: value }) }))
+                  update((c) => ({ ...c, mp: { ...c.mp!, current: value } }))
                 }
               />
             )}
@@ -371,17 +327,21 @@ export function SheetPage() {
             )}
           </ul>
           <h3>Testes de resistência</h3>
+          <p className="hint">Atributo + proficiência (destaque = proficiente na classe).</p>
           <ul className="preview-tags">
-            {(cls?.savingThrows ?? []).map((attrId) => {
-              const attr = system.attributes.find((a) => a.id === attrId);
-              const value = character.attributes[attrId] ?? 0;
+            {system.attributes.map((attr) => {
+              const bonus = getSavingThrowBonus(system, character, attr.id);
+              const proficient = (cls?.savingThrows ?? []).includes(attr.id);
               return (
-                <li key={attrId} className="tag tag-acc">
-                  {attr?.name ?? attrId} {value >= 0 ? `+${value}` : value}
+                <li
+                  key={attr.id}
+                  className={`tag ${proficient ? "tag-prof" : ""}`}
+                  title={proficient ? "Proficiente nesta resistência" : "Sem proficiência"}
+                >
+                  {attr.abbr} {bonus >= 0 ? `+${bonus}` : bonus}
                 </li>
               );
             })}
-            {!cls && <li className="tag">Classe não definida</li>}
           </ul>
         </section>
 

@@ -6,10 +6,9 @@ interface ResourceBarProps {
   max: number;
   tone: "hp" | "mp";
   onCurrentChange: (value: number) => void;
-  onMaxChange: (value: number) => void;
 }
 
-export function ResourceBar({ label, current, max, tone, onCurrentChange, onMaxChange }: ResourceBarProps) {
+export function ResourceBar({ label, current, max, tone, onCurrentChange }: ResourceBarProps) {
   const id = useId();
   const safeMax = Math.max(1, max);
   const safeCurrent = Math.min(safeMax, Math.max(0, current));
@@ -40,32 +39,21 @@ export function ResourceBar({ label, current, max, tone, onCurrentChange, onMaxC
           onChange={(event) => {
             const value = event.target.valueAsNumber;
             if (!Number.isNaN(value)) {
-              onCurrentChange(Math.min(safeMax, Math.max(0, value)));
+              onCurrentChange(value);
             }
           }}
         />
         <span className="resource-sep" aria-hidden="true">
           /
         </span>
-        <input
-          className="resource-max"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          aria-label={`${label} máximo`}
-          value={safeMax}
-          onChange={(event) => {
-            const value = event.target.valueAsNumber;
-            if (!Number.isNaN(value)) {
-              onMaxChange(Math.max(1, Math.floor(value)));
-            }
-          }}
-        />
+        <span className="resource-max-static" aria-label={`${label} máximo`}>
+          {safeMax}
+        </span>
         <button
           type="button"
           className="resource-btn"
           aria-label={`Aumentar ${label} em 1`}
-          onClick={() => onCurrentChange(Math.min(safeMax, safeCurrent + 1))}
+          onClick={() => onCurrentChange(safeCurrent + 1)}
         >
           +
         </button>
