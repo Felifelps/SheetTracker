@@ -8,12 +8,11 @@ import { ConfirmDialog } from "./ConfirmDialog";
 interface CharacterCardProps {
   stored: StoredCharacter;
   system: SystemDefinition;
-  onDuplicate: () => void;
   onDelete: () => void;
   onExport: () => void;
 }
 
-export function CharacterCard({ stored, system, onDuplicate, onDelete, onExport }: CharacterCardProps) {
+export function CharacterCard({ stored, system, onDelete, onExport }: CharacterCardProps) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const c = stored.data;
   const race = findRace(system, c.raceId);
@@ -64,9 +63,6 @@ export function CharacterCard({ stored, system, onDuplicate, onDelete, onExport 
         </Link>
         <button type="button" className="btn" onClick={onExport}>
           Exportar
-        </button>
-        <button type="button" className="btn" onClick={onDuplicate}>
-          Duplicar
         </button>
         <button
           type="button"

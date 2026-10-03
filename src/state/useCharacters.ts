@@ -4,7 +4,6 @@ import { wrapCharacter } from "../domain/character";
 import { loadCharacters, saveCharacters } from "../services/storage";
 import { exportCharacterFile } from "../services/importExport";
 import type { LoadResult } from "../services/storage";
-import { generateId } from "../utils/id";
 
 const SAVE_DEBOUNCE_MS = 300;
 
@@ -18,7 +17,6 @@ export interface CharactersApi {
   addCharacter: (character: StoredCharacter) => { replaced: boolean };
   updateCharacter: (id: string, updater: (data: Character) => Character) => void;
   deleteCharacter: (id: string) => void;
-  duplicateCharacter: (id: string) => string | null;
   exportCharacter: (id: string) => void;
 }
 
@@ -90,26 +88,6 @@ export function useCharacters(): CharactersApi {
     setCharacters((current) => current.filter((c) => c.data.id !== id));
   }, []);
 
-  const duplicateCharacter = useCallback(
-    (id: string): string | null => {
-      const source = characters.find((c) => c.data.id === id);
-      if (!source) return null;
-      const newId = generateId();
-      const copy: StoredCharacter = {
-        ...source,
-        data: {
-          ...source.data,
-          id: newId,
-          name: `${source.data.name} (cópia)`,
-          updatedAt: new Date().toISOString(),
-        },
-      };
-      setCharacters((current) => [...current, copy]);
-      return newId;
-    },
-    [characters]
-  );
-
   const exportCharacter = useCallback(
     (id: string) => {
       const source = characters.find((c) => c.data.id === id);
@@ -132,7 +110,6 @@ export function useCharacters(): CharactersApi {
     addCharacter,
     updateCharacter,
     deleteCharacter,
-    duplicateCharacter,
     exportCharacter,
   };
 }

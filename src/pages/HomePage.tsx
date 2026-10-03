@@ -137,7 +137,6 @@ export function HomePage() {
               key={stored.data.id}
               stored={stored}
               system={system}
-              onDuplicate={() => api.duplicateCharacter(stored.data.id)}
               onDelete={() => api.deleteCharacter(stored.data.id)}
               onExport={() => api.exportCharacter(stored.data.id)}
             />
