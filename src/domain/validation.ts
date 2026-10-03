@@ -155,14 +155,29 @@ export function validateSystemDefinition(raw: unknown): Validated<SystemDefiniti
         continue;
       }
       classIds.add(c.id);
+      e.check(
+        isNumber(c.hpBase) && c.hpBase > 0,
+        `Sistema: classe '${c.id}' sem 'hpBase' numérico positivo.`
+      );
+      if (c.spellcasting !== undefined) {
+        if (!isRecord(c.spellcasting) || !isString(c.spellcasting.abilityId)) {
+          e.add(`Sistema: 'spellcasting' da classe '${c.id}' inválido.`);
+        } else if (c.spellcasting.magicPoints !== undefined) {
+          const mp = c.spellcasting.magicPoints;
+          e.check(
+            isRecord(mp) && isNumber(mp.base) && isNumber(mp.unlockLevel) && mp.unlockLevel >= 1,
+            `Sistema: 'magicPoints' da classe '${c.id}' inválido (precisa de 'base' e 'unlockLevel' numéricos).`
+          );
+        }
+      }
       if (!isRecord(c.levels)) {
         e.add(`Sistema: classe '${c.id}' sem 'levels'.`);
         continue;
       }
       for (const [level, lv] of Object.entries(c.levels)) {
         const lvRec = isRecord(lv) ? lv : {};
-        if (!isRecord(lv) || !isNumber(lv.hp) || !isNumber(lv.proficiency)) {
-          e.add(`Sistema: nível ${level} da classe '${c.id}' inválido (precisa de 'hp' e 'proficiency' numéricos).`);
+        if (!isRecord(lv) || !isNumber(lv.proficiency)) {
+          e.add(`Sistema: nível ${level} da classe '${c.id}' inválido (precisa de 'proficiency' numérico).`);
         }
         const abilityRefs = isStringArray(lvRec.abilities) ? lvRec.abilities : [];
         for (const id of abilityRefs) {
@@ -285,6 +300,12 @@ function validateCharacterData(raw: unknown): Validated<Character> {
       );
       if (isRecord(it) && it.quantity !== undefined) {
         e.check(isNumber(it.quantity) && it.quantity >= 0, `Ficha: quantidade do item '${isString(it.name) ? it.name : ""}' deve ser um número ≥ 0.`);
+      }
+      if (isRecord(it) && it.acBonus !== undefined) {
+        e.check(isNumber(it.acBonus), "Ficha: bônus de CA do item deve ser um número.");
+      }
+      if (isRecord(it) && it.equipped !== undefined) {
+        e.check(isBoolean(it.equipped), "Ficha: campo 'equipped' do item deve ser booleano.");
       }
     }
   } else {

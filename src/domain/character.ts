@@ -24,6 +24,8 @@ export interface InventoryItem {
   damage?: string;
   description?: string;
   quantity: number;
+  acBonus?: number;
+  equipped?: boolean;
 }
 
 export interface CharacterCondition {
@@ -41,7 +43,6 @@ export interface Character {
   attributes: Record<string, number>;
   hp: HpState;
   mp?: MpState;
-  ac?: number;
   speed: number;
   skills: CharacterSkill[];
   abilityUses: Record<string, AbilityUseState>;

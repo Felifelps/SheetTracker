@@ -131,19 +131,20 @@
       "id": "necromante",
       "name": "Necromante",
       "description": "Especializado em necromancia, com uma rede menor de ilusões.",
+      "hpBase": 6,
       "savingThrows": ["con", "car"],
-      "spellcasting": { "abilityId": "int" },
+      "spellcasting": {
+        "abilityId": "int",
+        "magicPoints": { "base": 3, "unlockLevel": 2 }
+      },
       "levels": {
         "1": {
-          "hp": 6,
           "proficiency": 2,
           "abilities": ["conversar-com-mortos-vivos", "toque-da-morte"],
           "spells": ["ilusao-menor", "toque-arrepiante"]
         },
         "2": {
-          "hp": 10,
           "proficiency": 2,
-          "magicPoints": 3,
           "spells": ["infligir-ferimentos", "cegueira-surdez"]
         }
       }
@@ -152,19 +153,20 @@
       "id": "druida",
       "name": "Druida",
       "description": "Ligado à natureza.",
+      "hpBase": 8,
       "savingThrows": ["sab", "int"],
-      "spellcasting": { "abilityId": "sab" },
+      "spellcasting": {
+        "abilityId": "sab",
+        "magicPoints": { "base": 3, "unlockLevel": 2 }
+      },
       "levels": {
         "1": {
-          "hp": 8,
           "proficiency": 2,
           "abilities": ["falar-com-plantas-animais", "forma-selvagem"],
           "spells": ["orientacao", "chicote-de-espinhos"]
         },
         "2": {
-          "hp": 14,
           "proficiency": 2,
-          "magicPoints": 3,
           "spells": ["enredar", "curar-ferimentos"]
         }
       }
@@ -173,19 +175,20 @@
       "id": "feiticeira",
       "name": "Feiticeira",
       "description": "Origem Divina.",
+      "hpBase": 7,
       "savingThrows": ["con", "car"],
-      "spellcasting": { "abilityId": "car" },
+      "spellcasting": {
+        "abilityId": "car",
+        "magicPoints": { "base": 3, "unlockLevel": 2 }
+      },
       "levels": {
         "1": {
-          "hp": 7,
           "proficiency": 2,
           "abilities": ["cura-de-feridas"],
           "spells": ["raio-ardente", "escudo"]
         },
         "2": {
-          "hp": 12,
           "proficiency": 2,
-          "magicPoints": 3,
           "spells": ["queda-suave", "raio-guiador"]
         }
       }
@@ -194,15 +197,14 @@
       "id": "ladino",
       "name": "Ladino",
       "description": "Especialista em furtividade e golpes precisos.",
+      "hpBase": 8,
       "savingThrows": ["des", "int"],
       "levels": {
         "1": {
-          "hp": 8,
           "proficiency": 2,
           "abilities": ["especializacao", "ataque-furtivo", "giria-de-ladrao"]
         },
         "2": {
-          "hp": 13,
           "proficiency": 2,
           "abilities": ["passo-do-relampago"]
         }
@@ -333,5 +335,5 @@
       "description": "Gera uma fonte de luz simples. (Concedido pela raça Aasimar.)"
     }
   ],
-  "notes": "Fonte: arquivos do Obsidian (Sistema.md e fichas dos jogadores). Decisões documentadas: (1) PV do nível 1 foram inferidos das fichas dos jogadores (Sistema.md documenta apenas o nível 2); o PV máximo da ficha é sempre editável manualmente e os valores da tabela são apenas sugestão inicial. (2) Apenas as magias concedidas pela Maldição do Guardião (nível 2) custam Pontos de Magia; PM são recuperados após um descanso longo. (3) Habilidades com recarga 'encounter' (1x por encontro) também são restauradas por descanso curto e longo. (4) Deslocamento é medido em quadrados. (5) CA aparece apenas quando relevante (armadura); é um campo opcional. (6) A lista de perícias segue os nomes padrão D&D em português; as condições são uma lista de apoio, não regras formais dos arquivos."
+  "notes": "Fonte: arquivos do Obsidian (Sistema.md e fichas dos jogadores). Regras de progressão (definitivas): (1) PV máximo = hpBase + (nível - 1) × teto(hpBase / 2) + modificador de Constituição × nível — a Constituição é aplicada uma vez por nível; o máximo é recalculado quando nível ou Constituição mudam, preservando o PV atual sem ultrapassá-lo. (2) PM máximo = base + (nível - unlockLevel) × teto(base / 2), existindo apenas a partir do nível de desbloqueio da classe; no nível de desbloqueio o personagem recebe o valor base completo. (3) CA = 10 + modificador de Destreza + soma dos bônus de CA dos equipamentos equipados. (4) Teste de resistência = modificador do atributo + bônus de proficiência, quando a classe for proficiente. (5) PV e PM máximos são exclusivamente calculados pelo sistema: não são editáveis na interface e valores trazidos por JSON importado são ignorados e recalculados. (6) O seletor de nível oferece apenas os níveis com conteúdo efetivamente definido no JSON da classe. Outras decisões: (a) apenas as magias concedidas pela Maldição do Guardião (nível 2) custam Pontos de Magia; PM são recuperados após um descanso longo. (b) Habilidades com recarga 'encounter' (1x por encontro) também são restauradas por descanso curto e longo. (c) Descanso longo restaura PV e PM completamente; descanso curto recupera metade do máximo. (d) Deslocamento é medido em quadrados. (e) A lista de perícias segue os nomes padrão D&D em português; as condições são uma lista de apoio, não regras formais dos arquivos. Em caso de conflito com documentos antigos, valem a fórmula e as definições atuais."
 }

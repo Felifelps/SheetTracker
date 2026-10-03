@@ -49,10 +49,13 @@ export interface RaceDefinition {
   grantsSpells?: string[];
 }
 
+export interface MagicPointsProgression {
+  base: number;
+  unlockLevel: number;
+}
+
 export interface ClassLevelDefinition {
-  hp: number;
   proficiency: number;
-  magicPoints?: number;
   abilities?: string[];
   spells?: string[];
 }
@@ -61,9 +64,11 @@ export interface ClassDefinition {
   id: string;
   name: string;
   description: string;
+  hpBase: number;
   savingThrows: string[];
   spellcasting?: {
     abilityId: string;
+    magicPoints?: MagicPointsProgression;
   };
   levels: Record<string, ClassLevelDefinition>;
 }
