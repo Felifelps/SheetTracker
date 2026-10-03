@@ -1,5 +1,6 @@
-import type { StoredCharacter } from "../domain/character";
+import type { Character, StoredCharacter } from "../domain/character";
 import type { SystemDefinition } from "../domain/system";
+import { normalizeCharacterState } from "../rules/rest";
 import {
   validateCharacterAgainstSystem,
   validateStoredCharacter,
@@ -49,6 +50,16 @@ export type ImportOutcome =
   | { ok: true; character: StoredCharacter; replaced: boolean }
   | { ok: false; errors: string[] };
 
+function sanitizeImportedData(data: Character): Character {
+  const sanitized: Character = {
+    ...data,
+    hp: { current: data.hp.current, max: 0 },
+    mp: data.mp ? { current: data.mp.current, max: 0 } : undefined,
+  };
+  delete (sanitized as unknown as Record<string, unknown>).ac;
+  return sanitized;
+}
+
 export function importCharacterFromParsed(
   parsed: unknown,
   system: SystemDefinition
@@ -64,5 +75,12 @@ export function importCharacterFromParsed(
     return { ok: false, errors: refErrors };
   }
 
-  return { ok: true, character: stored, replaced: false };
+  return {
+    ok: true,
+    character: {
+      ...stored,
+      data: normalizeCharacterState(system, sanitizeImportedData(stored.data)),
+    },
+    replaced: false,
+  };
 }
