@@ -8,6 +8,7 @@ import {
   computeMaxHp,
   computeMaxMp,
   computeAc,
+  computeSpeed,
   getSavingThrowBonus,
   getProficiency,
   getSpellSaveDc,
@@ -16,7 +17,7 @@ import {
 import { applyRest, normalizeCharacterState } from "../rules/rest";
 import { getMaxDefinedLevel, getDefinedLevels } from "../rules/catalog";
 import { clampLevel } from "../rules/derived";
-import { importCharacterFromParsed } from "../services/importExport";
+import { importCharacterFromParsed, sameCharacterName } from "../services/importExport";
 import { wrapCharacter, type StoredCharacter, type Character } from "../domain/character";
 import { CUSTOM_CONDITION_PREFIX } from "../domain/character";
 import type { SystemDefinition } from "../domain/system";
@@ -40,7 +41,6 @@ function makeCharacter(overrides: Partial<Character> = {}): Character {
     level: 1,
     attributes: { for: 1, des: -1, con: 0, int: 4, sab: 1, car: 3 },
     hp: { current: 0, max: 0 },
-    speed: 6,
     skills: [],
     abilityUses: {},
     spellIds: [],
@@ -208,6 +208,38 @@ check(
 );
 
 check(
+  "deslocamento racial: tiefling = 6 quadrados",
+  computeSpeed(system, makeCharacter({ raceId: "tiefling" })) === 6,
+  String(computeSpeed(system, makeCharacter({ raceId: "tiefling" })))
+);
+check(
+  "deslocamento racial de todas as raças = 6",
+  system.races.every((r) => (r.speed ?? 0) === 6),
+  JSON.stringify(system.races.map((r) => [r.id, r.speed]))
+);
+check(
+  "bônus de deslocamento de item equipado é somado (botas +2 = 8)",
+  computeSpeed(system, makeCharacter({
+    inventory: [{ id: "b1", name: "Botas", speedBonus: 2, equipped: true, quantity: 1 }],
+  })) === 8,
+  ""
+);
+check(
+  "bônus de deslocamento de item NÃO equipado é ignorado",
+  computeSpeed(system, makeCharacter({
+    inventory: [{ id: "b1", name: "Botas", speedBonus: 2, equipped: false, quantity: 1 }],
+  })) === 6,
+  ""
+);
+check(
+  "item sem bônus declarado conta como 0",
+  computeSpeed(system, makeCharacter({
+    inventory: [{ id: "b2", name: "Mochila", equipped: true, quantity: 1 }],
+  })) === 6,
+  ""
+);
+
+check(
   "cenário 7: teste de resistência com proficiência (CON +0 + prof +2 = +2)",
   getSavingThrowBonus(system, gael, "con") === 2,
   String(getSavingThrowBonus(system, gael, "con"))
@@ -310,7 +342,7 @@ check(
 );
 
 check(
-  "cenário 10: importação ignora PV/PM máximos arbitrários e o campo ac antigo",
+  "cenário 10: importação ignora PV/PM máximos arbitrários e os campos ac/speed antigos",
   (() => {
     const hacked = wrapCharacter(
       makeCharacter({
@@ -319,17 +351,21 @@ check(
         hp: { current: 2, max: 999 },
         mp: { current: 1, max: 999 },
       })
-    ) as StoredCharacter & { data: Character & { ac?: number } };
-    hacked.data.ac = 25;
-    const result = importCharacterFromParsed(JSON.parse(JSON.stringify(hacked)), system);
+    );
+    const withLegacyFields = {
+      ...hacked,
+      data: { ...hacked.data, ac: 25, speed: 99 } as typeof hacked.data & Record<string, unknown>,
+    };
+    const result = importCharacterFromParsed(JSON.parse(JSON.stringify(withLegacyFields)), system);
     if (!result.ok) return false;
-    const data = result.character.data as Character & { ac?: number };
+    const data = result.character.data as Character & Record<string, unknown>;
     return (
       data.hp.max === 9 &&
       data.hp.current === 2 &&
       data.mp?.max === 3 &&
       data.mp.current === 1 &&
-      data.ac === undefined
+      data.ac === undefined &&
+      data.speed === undefined
     );
   })(),
   ""
@@ -359,6 +395,19 @@ check(
   ""
 );
 check("clampLevel respeita o máximo definido pela classe", clampLevel(5, 2) === 2 && clampLevel(0, 2) === 1, "");
+
+check(
+  "comparação de nomes para sobrescrita ignora caixa e espaços",
+  sameCharacterName("Gael Arisen", "  gael arisen ") &&
+    !sameCharacterName("Gael Arisen", "Kaelest T'nebris"),
+  ""
+);
+
+check(
+  "ficha antiga com 'speed' persistido ainda carrega (compatibilidade)",
+  validateStoredCharacter(JSON.parse(JSON.stringify({ ...storedGael, data: { ...storedGael.data, speed: 6, ac: 12 } }))).ok,
+  ""
+);
 
 function testExportRoundTrip(name: string, original: StoredCharacter) {
   const exportedJson: unknown = JSON.parse(JSON.stringify(original));
