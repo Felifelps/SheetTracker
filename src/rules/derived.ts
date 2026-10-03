@@ -1,6 +1,6 @@
 import type { SystemDefinition } from "../domain/system";
 import type { Character, MpState } from "../domain/character";
-import { findClass } from "./catalog";
+import { findClass, findRace } from "./catalog";
 
 export const AC_BASE = 10;
 
@@ -44,6 +44,15 @@ export function computeAc(character: Character): number {
     .filter((item) => item.equipped)
     .reduce((total, item) => total + (item.acBonus ?? 0), 0);
   return AC_BASE + dexModifier + equippedBonus;
+}
+
+export function computeSpeed(system: SystemDefinition, character: Character): number {
+  const race = findRace(system, character.raceId);
+  const base = race?.speed ?? system.defaultSpeed ?? 0;
+  const equippedBonus = character.inventory
+    .filter((item) => item.equipped)
+    .reduce((total, item) => total + (item.speedBonus ?? 0), 0);
+  return Math.max(0, base + equippedBonus);
 }
 
 export function isProficientInSavingThrow(
