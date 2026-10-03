@@ -39,6 +39,20 @@ export function findAbility(system: SystemDefinition, abilityId: string): Abilit
   return undefined;
 }
 
+export function getDefinedLevels(system: SystemDefinition, classId: string): number[] {
+  const cls = findClass(system, classId);
+  if (!cls) return [];
+  return Object.keys(cls.levels)
+    .map(Number)
+    .filter((level) => Number.isFinite(level) && level >= 1)
+    .sort((a, b) => a - b);
+}
+
+export function getMaxDefinedLevel(system: SystemDefinition, classId: string): number {
+  const levels = getDefinedLevels(system, classId);
+  return levels.length > 0 ? levels[levels.length - 1] : 1;
+}
+
 export function getLevelAbilities(system: SystemDefinition, cls: ClassDefinition, level: number): AbilityBase[] {
   const ids = new Set<string>();
   for (const [levelKey, lv] of Object.entries(cls.levels)) {

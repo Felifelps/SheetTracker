@@ -1,7 +1,7 @@
 import type { SystemDefinition } from "../domain/system";
 import type { Character, MpState } from "../domain/character";
 import { findAbility, findClass, findRace } from "./catalog";
-import { clampHp, clampMp } from "./derived";
+import { clampHp, clampMp, normalizeResources } from "./derived";
 
 export type RestKind = "short" | "long";
 
@@ -88,4 +88,14 @@ export function validateOrFixUses(system: SystemDefinition, character: Character
     };
   }
   return result;
+}
+
+export function normalizeCharacterState(system: SystemDefinition, character: Character): Character {
+  const initialized = initializeAbilityUses(system, character);
+  const fixed = validateOrFixUses(system, character);
+  const abilityUses: Record<string, { current: number }> = { ...initialized };
+  for (const [id, state] of Object.entries(fixed)) {
+    abilityUses[id] = state;
+  }
+  return normalizeResources(system, { ...character, abilityUses });
 }
