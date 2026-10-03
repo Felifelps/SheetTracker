@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "id": "pseudo-dnd",
+  "name": "Pseudo-DnD",
+  "description": "D&D extremamente simplificado. Os atributos são modificadores finais (bônus raciais já inclusos). Pontos de Magia são concedidos no nível 2 pela Maldição do Guardião.",
+  "attributes": [
+    { "id": "for", "name": "Força", "abbr": "FOR" },
+    { "id": "des", "name": "Destreza", "abbr": "DES" },
+    { "id": "con", "name": "Constituição", "abbr": "CON" },
+    { "id": "int", "name": "Inteligência", "abbr": "INT" },
+    { "id": "sab", "name": "Sabedoria", "abbr": "SAB" },
+    { "id": "car", "name": "Carisma", "abbr": "CAR" }
+  ],
+  "movementUnit": "quadrados",
+  "defaultSpeed": 6,
+  "skills": [
+    { "id": "acrobacia", "name": "Acrobacia" },
+    { "id": "arcanismo", "name": "Arcanismo" },
+    { "id": "atletismo", "name": "Atletismo" },
+    { "id": "atuacao", "name": "Atuação" },
+    { "id": "enganacao", "name": "Enganação" },
+    { "id": "historia", "name": "História" },
+    { "id": "intimidacao", "name": "Intimidação" },
+    { "id": "intuicao", "name": "Intuição" },
+    { "id": "investigacao", "name": "Investigação" },
+    { "id": "medicina", "name": "Medicina" },
+    { "id": "natureza", "name": "Natureza" },
+    { "id": "percepcao", "name": "Percepção" },
+    { "id": "persuasao", "name": "Persuasão" },
+    { "id": "prestidigitacao", "name": "Prestidigitação" },
+    { "id": "furtividade", "name": "Furtividade" },
+    { "id": "religiao", "name": "Religião" },
+    { "id": "sobrevivencia", "name": "Sobrevivência" }
+  ],
+  "conditions": [
+    { "id": "cego", "name": "Cego", "severity": "medium" },
+    { "id": "surdo", "name": "Surdo", "severity": "low" },
+    { "id": "imobilizado", "name": "Imobilizado", "severity": "high" },
+    { "id": "preso", "name": "Preso", "severity": "medium" },
+    { "id": "envenenado", "name": "Envenenado", "severity": "medium" },
+    { "id": "atordoado", "name": "Atordoado", "severity": "high" },
+    { "id": "assustado", "name": "Assustado", "severity": "low" },
+    { "id": "inconsciente", "name": "Inconsciente", "severity": "high" },
+    { "id": "enfraquecido", "name": "Enfraquecido", "severity": "medium" },
+    { "id": "sangrando", "name": "Sangrando", "severity": "medium" }
+  ],
+  "races": [
+    {
+      "id": "tiefling",
+      "name": "Tiefling",
+      "description": "+1 em Inteligência e Carisma; +2 em Enganação e Furtividade.",
+      "attributeBonuses": { "int": 1, "car": 1 },
+      "skillBonuses": { "enganacao": 2, "furtividade": 2 },
+      "traits": [
+        {
+          "id": "resistencia-fogo",
+          "name": "Resistência a Fogo",
+          "description": "Reduz 5 + metade do nível (arredondado para baixo) do dano de fogo recebido."
+        }
+      ]
+    },
+    {
+      "id": "drow",
+      "name": "Drow",
+      "description": "+1 em Destreza e Carisma; +2 em Furtividade e Intimidação.",
+      "attributeBonuses": { "des": 1, "car": 1 },
+      "skillBonuses": { "furtividade": 2, "intimidacao": 2 },
+      "traits": [
+        {
+          "id": "visao-no-escuro",
+          "name": "Visão no Escuro",
+          "description": "Vê na escuridão normalmente."
+        },
+        {
+          "id": "transe",
+          "name": "Transe",
+          "description": "Não precisa dormir 8h; entra em transe por 4h."
+        },
+        {
+          "id": "magia-ancestral",
+          "name": "Magia Ancestral",
+          "description": "Uma vez por encontro: conjura Nuvem de Escuridão ou Fogo Obscuro.",
+          "uses": { "max": 1, "recharge": "encounter" }
+        }
+      ]
+    },
+    {
+      "id": "aasimar",
+      "name": "Aasimar",
+      "description": "+1 em Carisma e Sabedoria.",
+      "attributeBonuses": { "car": 1, "sab": 1 },
+      "skillBonuses": {},
+      "grantsSpells": ["luz"],
+      "traits": [
+        {
+          "id": "resistencia-necrotico-radiante",
+          "name": "Resistência Necrótica e Radiante",
+          "description": "Resistência a dano necrótico e radiante."
+        },
+        {
+          "id": "maos-curativas",
+          "name": "Mãos Curativas",
+          "description": "Toque em uma criatura restaura 2d4 PV.",
+          "uses": { "max": 1, "recharge": "long-rest" }
+        }
+      ]
+    },
+    {
+      "id": "draconato",
+      "name": "Draconato",
+      "description": "+1 em Força e Carisma. Ancestral a escolher (ex.: Bronze — elétrico).",
+      "attributeBonuses": { "for": 1, "car": 1 },
+      "skillBonuses": {},
+      "traits": [
+        {
+          "id": "arma-de-sopro",
+          "name": "Arma de Sopro",
+          "description": "Ação: exala energia destrutiva. Alvo faz teste de resistência de Constituição (CD = 10 + Constituição). Fracasso: 2d6 de dano do elemento do ancestral; sucesso: metade.",
+          "uses": { "max": 1, "recharge": "long-rest" }
+        },
+        {
+          "id": "resistencia-eletrico",
+          "name": "Resistência a Dano Elétrico",
+          "description": "Resistência a dano elétrico (conforme ancestral)."
+        }
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "id": "necromante",
+      "name": "Necromante",
+      "description": "Especializado em necromancia, com uma rede menor de ilusões.",
+      "savingThrows": ["con", "car"],
+      "spellcasting": { "abilityId": "int" },
+      "levels": {
+        "1": {
+          "hp": 6,
+          "proficiency": 2,
+          "abilities": ["conversar-com-mortos-vivos", "toque-da-morte"],
+          "spells": ["ilusao-menor", "toque-arrepiante"]
+        },
+        "2": {
+          "hp": 10,
+          "proficiency": 2,
+          "magicPoints": 3,
+          "spells": ["infligir-ferimentos", "cegueira-surdez"]
+        }
+      }
+    },
+    {
+      "id": "druida",
+      "name": "Druida",
+      "description": "Ligado à natureza.",
+      "savingThrows": ["sab", "int"],
+      "spellcasting": { "abilityId": "sab" },
+      "levels": {
+        "1": {
+          "hp": 8,
+          "proficiency": 2,
+          "abilities": ["falar-com-plantas-animais", "forma-selvagem"],
+          "spells": ["orientacao", "chicote-de-espinhos"]
+        },
+        "2": {
+          "hp": 14,
+          "proficiency": 2,
+          "magicPoints": 3,
+          "spells": ["enredar", "curar-ferimentos"]
+        }
+      }
+    },
+    {
+      "id": "feiticeira",
+      "name": "Feiticeira",
+      "description": "Origem Divina.",
+      "savingThrows": ["con", "car"],
+      "spellcasting": { "abilityId": "car" },
+      "levels": {
+        "1": {
+          "hp": 7,
+          "proficiency": 2,
+          "abilities": ["cura-de-feridas"],
+          "spells": ["raio-ardente", "escudo"]
+        },
+        "2": {
+          "hp": 12,
+          "proficiency": 2,
+          "magicPoints": 3,
+          "spells": ["queda-suave", "raio-guiador"]
+        }
+      }
+    },
+    {
+      "id": "ladino",
+      "name": "Ladino",
+      "description": "Especialista em furtividade e golpes precisos.",
+      "savingThrows": ["des", "int"],
+      "levels": {
+        "1": {
+          "hp": 8,
+          "proficiency": 2,
+          "abilities": ["especializacao", "ataque-furtivo", "giria-de-ladrao"]
+        },
+        "2": {
+          "hp": 13,
+          "proficiency": 2,
+          "abilities": ["passo-do-relampago"]
+        }
+      }
+    }
+  ],
+  "abilities": [
+    {
+      "id": "conversar-com-mortos-vivos",
+      "name": "Conversar com Mortos-Vivos e Espíritos",
+      "description": "Teste de Inteligência para se comunicar com mortos-vivos ou espíritos (dificuldade definida pelo mestre a cada situação)."
+    },
+    {
+      "id": "toque-da-morte",
+      "name": "Toque da Morte",
+      "description": "Ataque corpo a corpo com magia contra uma criatura viva. Acerto: 1d8 dano necrótico + Inteligência. Ganha PV temporários iguais ao dano causado (dobro se matar a criatura).",
+      "uses": { "max": 2, "recharge": "long-rest" }
+    },
+    {
+      "id": "falar-com-plantas-animais",
+      "name": "Falar com Plantas e Animais",
+      "description": "Teste de Sabedoria (+2 + SAB) para se comunicar com plantas ou animais (dificuldade definida pelo mestre a cada situação)."
+    },
+    {
+      "id": "forma-selvagem",
+      "name": "Forma Selvagem",
+      "description": "Transforma-se em um animal já conhecido (não pode voar ou nadar). Usa os PV do animal enquanto transformada. Mantém Inteligência, Sabedoria, Carisma, personalidade e memórias.",
+      "uses": { "max": 2, "recharge": "long-rest", "shortRestRecovery": 1 }
+    },
+    {
+      "id": "cura-de-feridas",
+      "name": "Cura de Feridas",
+      "description": "Toque em uma criatura restaura 1d8 + Carisma de PV. Não funciona em mortos-vivos ou constructos.",
+      "uses": { "max": 2, "recharge": "long-rest" }
+    },
+    {
+      "id": "especializacao",
+      "name": "Especialização",
+      "description": "Dobra o bônus de treino (+4) nas duas perícias de especialização escolhidas."
+    },
+    {
+      "id": "ataque-furtivo",
+      "name": "Ataque Furtivo",
+      "description": "1x por turno: adiciona 1d6 no dano contra uma criatura acertada, desde que tenha vantagem na jogada de ataque (flanquear o alvo também concede vantagem automaticamente)."
+    },
+    {
+      "id": "giria-de-ladrao",
+      "name": "Gíria de Ladrão",
+      "description": "Conhece um dialeto secreto de jargões e sinais usado por ladrões para passar mensagens disfarçadas e reconhecer avisos (perigo, território de guilda, alvos fáceis, esconderijos)."
+    },
+    {
+      "id": "passo-do-relampago",
+      "name": "Passo do Relâmpago",
+      "description": "Ação bônus: move-se até 3 quadrados sem provocar ataques de oportunidade. Se terminar o movimento adjacente a uma criatura, ganha vantagem no próximo ataque contra ela neste turno.",
+      "uses": { "max": 2, "recharge": "long-rest" }
+    }
+  ],
+  "spells": [
+    {
+      "id": "ilusao-menor",
+      "name": "Ilusão Menor",
+      "description": "Cria um som ou a imagem de um objeto pequeno, até um cubo de ~1,5m, por 1 minuto. Investigável com teste de Inteligência contra sua CD de magia."
+    },
+    {
+      "id": "toque-arrepiante",
+      "name": "Toque Arrepiante",
+      "description": "Alcance ~36m. Ataque à distância com magia. Acerto: 1d8 dano necrótico; o alvo não recupera PV até seu próximo turno (desvantagem em ataques se for morto-vivo)."
+    },
+    {
+      "id": "infligir-ferimentos",
+      "name": "Infligir Ferimentos",
+      "description": "Ataque corpo a corpo com magia contra uma criatura ao alcance. Se acertar, causa 3d10 de dano necrótico.",
+      "pmCost": 2
+    },
+    {
+      "id": "cegueira-surdez",
+      "name": "Cegueira/Surdez",
+      "description": "Uma criatura ao alcance deve realizar um teste de resistência. Em caso de falha, fica cega ou surda (à sua escolha) por um período determinado pelo mestre.",
+      "pmCost": 1
+    },
+    {
+      "id": "orientacao",
+      "name": "Orientação",
+      "description": "Toque, concentração até 1 min: o alvo pode somar 1d4 a um teste de perícia à escolha, uma vez antes da magia acabar."
+    },
+    {
+      "id": "chicote-de-espinhos",
+      "name": "Chicote de Espinhos",
+      "description": "Alcance ~9m. Ataque corpo a corpo com magia. Acerto: 1d6 perfurante e puxa o alvo até ~3m (se Grande ou menor)."
+    },
+    {
+      "id": "enredar",
+      "name": "Enredar",
+      "description": "Raízes e vinhas surgem em uma área próxima. Criaturas na área fazem teste de resistência ou ficam imobilizadas. Enquanto presas, podem tentar escapar com um novo teste.",
+      "pmCost": 1
+    },
+    {
+      "id": "curar-ferimentos",
+      "name": "Curar Ferimentos",
+      "description": "Toque em uma criatura restaura 1d8 + Sabedoria PV.",
+      "pmCost": 1
+    },
+    {
+      "id": "raio-ardente",
+      "name": "Raio Ardente",
+      "description": "Alcance ~36m. Ataque à distância com magia. Acerto: 1d10 dano de fogo (pode incendiar objetos inflamáveis)."
+    },
+    {
+      "id": "escudo",
+      "name": "Escudo",
+      "description": "Reação ao ser atingida: +5 na CA (inclusive contra o ataque que ativou) até o início do seu próximo turno, e nega dano de mísseis mágicos."
+    },
+    {
+      "id": "queda-suave",
+      "name": "Queda Suave",
+      "description": "Envelopa uma criatura com uma corrente de ar, reduzindo sua velocidade de queda. Enquanto durar, a criatura não sofre dano de queda e controla parcialmente a descida.",
+      "pmCost": 1
+    },
+    {
+      "id": "raio-guiador",
+      "name": "Raio Guiador",
+      "description": "Concentra energia divina e dispara um feixe radiante em um alvo no alcance. Ataque à distância com magia. Acerto: 3d8 de dano radiante.",
+      "pmCost": 2
+    },
+    {
+      "id": "luz",
+      "name": "Luz",
+      "description": "Gera uma fonte de luz simples. (Concedido pela raça Aasimar.)"
+    }
+  ],
+  "notes": "Fonte: arquivos do Obsidian (Sistema.md e fichas dos jogadores). Decisões documentadas: (1) PV do nível 1 foram inferidos das fichas dos jogadores (Sistema.md documenta apenas o nível 2); o PV máximo da ficha é sempre editável manualmente e os valores da tabela são apenas sugestão inicial. (2) Apenas as magias concedidas pela Maldição do Guardião (nível 2) custam Pontos de Magia; PM são recuperados após um descanso longo. (3) Habilidades com recarga 'encounter' (1x por encontro) também são restauradas por descanso curto e longo. (4) Deslocamento é medido em quadrados. (5) CA aparece apenas quando relevante (armadura); é um campo opcional. (6) A lista de perícias segue os nomes padrão D&D em português; as condições são uma lista de apoio, não regras formais dos arquivos."
+}
